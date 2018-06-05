@@ -1,0 +1,5 @@
+name: datavask_workshop
+dependencies:
+ - python=3.6.5
+ - pandas
+ - keras
