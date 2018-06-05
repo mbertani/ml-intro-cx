@@ -34,53 +34,80 @@ class TestDataCleaner:
         elif test_frame['OriginAimedDepartureTime'].isnull().sum() >= 65890:
             # self._print_test_failed()
             self._print_test_failed(
-                "Over 65 000 rows are missing critical route information and should be removed."
-                " \nInspect the data with 'frame.head()' and add columns contaning NaN values. columns = ['column_1','column_2','column_3']")
+                "Over 65 000 rows are missing critical route information and should be removed. \nInspect the data with 'frame.head()' and add columns contaning NaN values. columns = ['column_1','column_2','column_3']")
 
         elif test_frame['RecordedAtTime'].isnull().sum() > 0\
                 or test_frame['OriginAimedDepartureTime'].isnull().sum() > 0\
                 or test_frame['DestinationAimedArrivalTime'].isnull().sum() > 0:
             self._print_test_failed(
-                "There are still some rows missing crucial information related to the bus schedule and whether the bus is on time or not. HINT: frame['DestinationAimedArrivalTime'].isnull().sum()")
+                "You have removed most of NaN values but more cleaning is required: \nThere are still some rows missing crucial information related to the bus schedule and whether the bus is on time or not. HINT: frame['DestinationAimedArrivalTime'].isnull().sum()")
 
         elif test_frame['Delay'].isnull().sum() > 0:
             # self._print_test_failed()
-            self._print_test_failed("For the machine learning later on, we need to know if a bus is on schedule, ahead or behind.", test_frame['TripId'].isnull().sum(),
-                                    "rows are currently missing this information")
+            self._print_test_failed("You have removed most of NaN values but more cleaning is required: \nFor the machine learning later on, we need to know if a bus is on schedule, ahead or behind. " + str(test_frame['TripId'].isnull().sum()) + " rows are currently missing this information")
 
         elif test_frame['TripId'].isnull().sum() > 0:
             # self._print_test_failed()
-            self._print_test_failed(test_frame['TripId'].isnull().sum(), "rows are missing an identification for its current trip")
+            self._print_test_failed( "You have removed most of NaN values but more cleaning is required: \n " +str(test_frame['TripId'].isnull().sum()) + " rows are missing an identification for its current trip")
 
         else:
             self._print_test_passed()
 
+
+    def remove_redundant_columns(self,test_frame):
+
+
+        if 'Position' in test_frame.columns and 'Longitude' in test_frame.columns and 'Latitude' in test_frame.columns:
+            self._print_test_failed("Some columns contain the same information. Keep the columns that are most similar to the other columns.")
+
+        elif 'Position' in test_frame.columns and (not 'Longitude' in test_frame.columns and not 'Latitude' in test_frame.columns):
+            self._print_test_failed("Your are almost there. Remove the column 'Position' instead, and keep the columns 'Longitude' and 'Latitude'. These are easier to work with later")
+
+        elif 'Position' in test_frame.columns and ( 'Longitude' in test_frame.columns and not 'Latitude' in test_frame.columns):
+            self._print_test_failed("Your are close. You should keep column 'Latitude' and maybe remove another column")
+        elif 'Position' in test_frame.columns and (not 'Longitude' in test_frame.columns and 'Latitude' in test_frame.columns):
+            self._print_test_failed("Your are close. You should keep column 'Longitude' and maybe remove another column")
+        elif not 'Position' in test_frame.columns and  'Longitude' in test_frame.columns and 'Latitude' in test_frame.columns:
+            self._print_test_passed()
+
+        elif not set(self.include).issubset(test_frame):
+            self._print_test_failed("Some important columns removed")
+
+        else:
+            self._print_test_failed("Some columns contain the same information.")
+
+
+
     def remove_outliers(self, test_frame):
         # TODO: add all outlier checks
         outlier_date = (test_frame['RecordedAtTime'].astype(str).astype('datetime64[ns]') < datetime(2017, 1, 1)).sum()
-        outlier_lat = (test_frame['Latitude'] > 61).sum()
-        outlier_lon = (test_frame['Longitude'] > 7.3).sum()
-        outlier_delay = (test_frame['Delay'] < -3000).sum()
-        outlier_delay_max = (test_frame['Delay'] > 3000).sum()
+        outlier_date_future = (test_frame['RecordedAtTime'].astype(str).astype('datetime64[ns]') > datetime(2017, 3, 20)).sum()
+        outlier_lat = (test_frame['Latitude'] > 60 ).sum() + (test_frame['Latitude'] < 58 ).sum()
+        outlier_lon = (test_frame['Longitude'] > 7.3).sum() + (test_frame['Longitude'] < 4.7).sum()
+        outlier_delay = (test_frame['Delay'] < -1000).sum()
+        outlier_delay_max = (test_frame['Delay'] > 2000).sum()
         outlier_distance = (test_frame['DistanceBetweenStops'] == 0).sum()
-        outlier_time = (test_frame['OriginAimedDepartureTime'] >= test_frame['RecordedAtTime']).sum()
+        outlier_time = (test_frame['OriginAimedDepartureTime'] > test_frame['RecordedAtTime']).sum()
+        # outlier_time_2 = (test_frame['DestinationAimedArrivalTime'] < test_frame['RecordedAtTime']).sum()
 
         if outlier_date > 0:
-            return False, "Data from more than one day included, revise remove_outliers rule"
-        elif outlier_lat > 0:
-            return False, "Latitude is outside Rogaland, revise remove_outliers rule"
-        elif outlier_lon > 0:
-            return False, "Longitude is outside Rogaland, revise remove_outliers rule"
-        elif outlier_delay > 0:
-            return False, "Buses are way ahead of their schedule, revise remove_outliers rule"
-        elif outlier_delay_max > 0:
-            return False, "Buses are too delayed, engine malfunction perhaps? revise remove_outliers rule"
-        elif outlier_distance > 0:
-            return False, "There should be a minimum distance between two stops, right? revise remove_outliers rule"
+            self._print_test_failed("Some of the data is recorded before 2017")
+        elif outlier_date_future > 0:
+            self._print_test_failed("Do we need a to predict future bus delays when some of the buses are already driving in the future? \nHINT: frame['RecordedAtTime'].map(pd.Timestamp.date).unique()")
         elif outlier_time > 0:
-            return False, "Records before the departure time from the first stop is not interesting, revise remove_outliers rule"
+            self._print_test_failed("Records before the scheduled departure time is not interesting")
+        elif outlier_delay > 0:
+            self._print_test_failed("One bus is " + str(int(abs(test_frame['Delay'].min()) /60)) + " minutes ahead schedule! Make some assumptions about the delay and filter out the ones outside your chosen range. ")
+            # return False, "Buses are way ahead of their schedule, revise remove_outliers rule"
+        elif outlier_delay_max > 0:
+            self._print_test_failed("One bus is "+str(int(test_frame['Delay'].max() / 60))+" minutes behind schedule! Make some assumptions about the delay and filter out the ones outside your chosen range.")
+            # return False, "Buses are too delayed, engine malfunction perhaps? revise remove_outliers rule"
+        # elif outlier_distance > 0:
+        #     return False, "There should be a minimum distance between two stops, right? revise remove_outliers rule"
+        elif outlier_lat > 0 or outlier_lon > 0:
+            self._print_test_failed("Some of the buses are outside Rogaland")
         else:
-            return True, ""
+            self._print_test_passed()
 
     def print_stats(self, test_frame):
         print("")
@@ -99,9 +126,15 @@ class TestDataCleaner:
         remaining = self._has_columns(test_frame, null_values)
 
         if set(self.include).issubset(test_frame):
-            if remaining > 0:
+
+            if remaining == 1:
                 # print("TEST FAILED:")
-                msg = str(remaining)+"/"+str(len(null_values))+" columns still contain NaN values. Hint: frame.isnull().any()"
+                msg = str(remaining)+"/"+str(len(null_values))+" columns still contain NaN values. \nHint: frame.isnull().any()"
+                self._print_test_failed(msg)
+
+            elif remaining > 0:
+                # print("TEST FAILED:")
+                msg = str(remaining)+"/"+str(len(null_values))+" columns still contain NaN values."
                 self._print_test_failed(msg)
             else:
                 # print("TEST PASSED")
@@ -120,8 +153,8 @@ class TestDataCleaner:
         if set(self.include).issubset(test_frame):
             if remaining > 0:
                 # print("TEST FAILED:")
-                msg = str(remaining)+"/", str(
-                    len(null_values))+" columns have one hardcoded value. \nHint: Use 'frame['column_1'].value_counts()' to display unique values in column 'column_1'"
+                msg = str(remaining)+"/" + str(
+                    len(null_values))+" columns have one hardcoded value.\nHINT: Use 'frame['column_1'].value_counts()' to display unique values in column 'column_1'"
                 self._print_test_failed(msg)
             else:
                 # print("TEST PASSED")

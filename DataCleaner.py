@@ -36,6 +36,7 @@ class DataCleaner(object):
         frame = frame[frame['RecordedAtTime'].astype(str).astype('datetime64[ns]') > datetime(2017, 1, 1)]
         frame = frame[frame['Latitude'] < 61]
         frame = frame[frame['Longitude'] < 7.3]
+        frame = frame[frame['Longitude'] > 4.7]
         frame = frame[frame['Delay'] > -1000]
         frame = frame[frame['Delay'] < 1000]
         frame = frame[frame['DistanceBetweenStops'] > 0]
