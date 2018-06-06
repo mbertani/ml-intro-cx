@@ -78,6 +78,9 @@ def get_dataframe():
     frame_1 = pd.DataFrame(dicts)
 
     frame_2 = convertColumnTypes(frame_1)
+    print("Done")
+    print("")
+    print(" ")
 
     return frame_2
 

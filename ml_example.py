@@ -15,12 +15,12 @@ from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
 
-def cat(x):
-    if x <-1:
+def delay_to_category(delay):
+    if delay <-1:
         return "Ahead of schedule"
-    if x > 200:
+    if delay > 200:
         return "Very Delayed"
-    if x > 100:
+    if delay > 100:
         return "Delayed"
     return "On schedule"
 
@@ -40,7 +40,7 @@ def convert_date_and_time_columns(frame):
     frame['Minute'] = frame['time_datetime'].dt.minute
 
 
-    frame['Time'] = frame['Hour'].map(str) + ":" + frame['Minute'].astype(str)
+    # frame['Time'] = frame['Hour'].map(str) + ":" + frame['Minute'].astype(str)
 
     # frame['Weekday'] = frame['Weekday'].astype('category', ordered=True, categories=[0, 1, 2, 3, 4, 5, 6])
     # frame = pd.get_dummies(frame, columns=['Weekday'])
@@ -70,64 +70,41 @@ def convert_date_and_time_columns(frame):
 def train_keras(frame):
 
 
-    batch_size = 2024
-    num_classes = 4
-    epochs = 100
+    batch_size = 8 # Number of rows to process before updating the weight
+    num_classes = 4 # Number of delay categories ["On schedule","Delayed","Very Delayed","Ahead of schedule"]
+    epochs = 10 # How many full iterations through the dataset
 
-    frame = frame.sample(frac=1)
+    frame = frame.sample(frac=1) # Shuffle the data
 
-    categories = list(frame['Line'].unique())
+    categories = list(frame['Line'].unique()) # Unique Lines
     categories.sort()
 
-    # pprint(frame)
 
-    frame['Line'] = pd.Categorical(frame['Line'],categories=categories,ordered=True)
-    x_train = pd.get_dummies(frame,columns=['Line'])
+    frame['Line'] = pd.Categorical(frame['Line'],categories=categories,ordered=True) # Converts Line to category datatype
+    x_train = pd.get_dummies(frame,columns=['Line']) # One-hot encoding: One columns is transformend into one column for every possible value
 
-    x_train['Time'] = pd.Categorical(x_train['Time'])
-    x_train = pd.get_dummies(x_train,columns=['Time'])
 
-    categories_y = list(frame['Delay_2'].unique())
+    categories_y = list(frame['Delay'].unique())
     categories_y.sort()
 
-    x_train.pop('Delay')
-    x_train.pop('Seconds')
 
-    y_labels = (x_train.pop('Delay_2'))
+    y_labels = (x_train.pop('Delay'))
     y_labels = pd.Categorical(y_labels,categories=categories_y,ordered=True)
     y_labels = pd.get_dummies(y_labels)
 
     pprint(x_train.head())
     pprint(y_labels.head())
 
-    # frame['LineId'] = pd.Categorical(frame['LineId'],categories=categories,ordered=True)
-    # x_train = pd.get_dummies(frame,columns=['LineId'])
-
-
-    # frame['LineId'] = pd.Categorical(frame['LineId'],categories=categories,ordered=True)
-    # frame = pd.get_dummies(frame,columns=['LineId'])
-
-    # convert class vectors to binary class matrices
-    # y_train = keras.utils.to_categorical(np.array(y_labels), num_classes)
-    # y_test = keras.utils.to_categorical(y_test, num_classes)
 
     x_train = np.array(x_train)
     y_labels = np.array(y_labels)
 
     model = Sequential()
-
-
     model.add(Dense(300,activation='relu',input_shape=(x_train.shape[1],)))
-
     model.add(Dense(200,activation='relu'))
-
     model.add(Dense(100,activation='relu'))
-
     model.add(Dense(num_classes, activation='softmax'))
 
-    # model.compile(loss=keras.losses.categorical_crossentropy,
-    #               optimizer=keras.optimizers.Adadelta(),
-    #               metrics=['accuracy'])
 
     model.compile(loss=keras.losses.mean_squared_error, optimizer='sgd',
                   metrics=['accuracy'])
@@ -142,14 +119,17 @@ def train_keras(frame):
     print('Test accuracy:', score[1])
 
     predictions = model.predict(x_train, verbose=1)
-    for p in range(0, len(x_train)):
-        print(categories_y)
-        print(str(categories_y[np.argmax(predictions[p])]) + " - " + str(predictions[p]))
+    for p in range(0, 5):
+        # print(categories_y)
+        # print(str(categories_y[np.argmax(predictions[p])]) + " - " + str(predictions[p]))
 
         show_delay_prediction(predictions[p],categories_y)
 
 
         print("Time: " + str(timedelta(seconds=x_train[p][0]*(24.0 * 60.0 * 60.0))))
+        print("Line",x_train[p][1])
+        print("Line",frame.iloc[p].Line)
+        print("Line",frame.iloc[p].Delay)
 
         # print(categories_y[np.argmax(predictions[p])])
         # print(x_train[p])
@@ -164,10 +144,6 @@ def read_data(filename):
      'Delay':np.float32, 'NextStop':str, 'LineId': np.int32, 'DirectionRef':str,'OriginStopTerminalCode':np.int32,
      'DestinationTerminalCode':np.int32, 'NextStopCode':np.int32, 'VehicleId':np.int32,
      'DistanceBetweenStops':np.float32, 'PercentageBetweenStops':np.float32, 'TripHeadsign':str, 'Heading':np.float32}
-
-    #Parsing the three date columns as date
-    # dates = ['OriginAimedDepartureTime', 'RecordedAtTime', 'DestinationAimedArrivalTime']
-
 
     return pd.read_csv(filename,
                    header=0,
@@ -205,7 +181,7 @@ if __name__ == '__main__':
     print(frame.shape)
     print(frame.head())
 
-    frame = read_data('data/lineBased_september_2017_train.csv')
+    # frame = read_data('data/lineBased_september_2017_train.csv')
 
     frame_pruned = frame[['Delay','Line','RecordedAtTime']]
     frame_pruned = frame_pruned.dropna()
@@ -215,7 +191,7 @@ if __name__ == '__main__':
     # frame_pruned['Delay_2'] = pd.cut(frame_pruned['Delay'],3, labels = ["Ahead", "On schedule", "Delayed"])
 
     # for col in df.columns:
-    frame_pruned['Delay_2'] = frame_pruned['Delay'].apply(lambda x: cat(x))
+    frame_pruned['Delay'] = frame_pruned['Delay'].apply(lambda x: delay_to_category(x))
     frame_pruned = convert_date_and_time_columns(frame_pruned)
 
     print(frame_pruned.head(300))
