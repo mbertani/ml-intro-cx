@@ -50,7 +50,7 @@ Vagrant.configure("2") do |config|
 	printf "c.NotebookApp.password = u'sha1:83aab2852741:71a56c4865ed39886d3742c4aac07fdd64489627'" > /home/vagrant/.jupyter/jupyter_notebook_config.py
 	chown vagrant:vagrant /home/vagrant/.jupyter/jupyter_notebook_config.py
 	# make startup script
-	echo jupyter notebook --ip 0.0.0.0 --notebook-dir=/home/vagrant/ > /home/vagrant/run_jupyter.sh
+	echo jupyter notebook --ip 0.0.0.0 --notebook-dir=/home/vagrant/ml-intro-cx > /home/vagrant/run_jupyter.sh
 	chmod +x /home/vagrant/run_jupyter.sh
 	chown vagrant:vagrant /home/vagrant/run_jupyter.sh
 	
@@ -58,7 +58,7 @@ Vagrant.configure("2") do |config|
 	# $ ./run_jupyter.sh	
 	# Go to you http://localhost:8888 and log on with the password "workshop"
 
-        echo jupyter lab --ip 0.0.0.0 > /home/vagrant/run_lab.sh
+        echo jupyter lab --ip 0.0.0.0  --notebook-dir=/home/vagrant/ml-intro-cx > /home/vagrant/run_lab.sh
         chmod +x /home/vagrant/run_lab.sh
         chown vagrant:vagrant /home/vagrant/run_lab.sh
         # Log into the box and run ./run_lab.sh then go to http://localhost:8888 and use "workshop" as password
