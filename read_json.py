@@ -13,10 +13,10 @@ def fileNameSortKey(fileName):
     """Return a key string that gives the sort order of the source files."""
     prefix = fileName[0:5]
     year = fileName[11:15]
-    moth = fileName[8:10]
+    month = fileName[8:10]
     day = fileName[5:7]
     time = fileName[16:]
-    return prefix+year+'-'+moth+'-'+day+"_"+time
+    return prefix+year+'-'+month+'-'+day+"_"+time
 
 
 
@@ -66,9 +66,16 @@ def convertColumnTypes(frame):
     #     ['Line', 'From', 'To', 'NextStop', 'TripId', 'LineId', 'OriginStopTerminalCode', 'DestinationTerminalCode',
     #      'NextStopCode', 'TripHeadsign', 'Id']].astype(unicode)
     # frame['DirectionRef'] = frame['DirectionRef'].astype('category')
+
+
+
+    #frameRecordedAtTime = frame['DirectionRef'].astype('category')
     frame['VehicleModes'] = '[1]'  # TODO: hvis liste ikke tomt tar fÃ¸rste element.
     # frame.pop('VehicleModes')
-    # frame['VehicleModes'] = frame['VehicleModes'].astype(int)
+    frame['Position'] = frame['Position'].astype(str)
+
+    frame = frame[frame['RecordedAtTime'] != "3017-03-10T12:39:16+00:00"]
+
     return frame
 
 
@@ -84,9 +91,11 @@ def get_dataframe():
 
     return frame_2
 
-# if __name__ == '__main__':
-#     pathToBlobs = "data/random_one_day"
-#     dicts = loadData(pathToBlobs)
-#     frame = pd.DataFrame(dicts)
+if __name__ == '__main__':
+    pathToBlobs = "data/random_one_day"
+
+    frame = get_dataframe()
+    # dicts = loadData(pathToBlobs)
+    # frame = pd.DataFrame(dicts)
 #     cleaner = DataCleaner()
 #     frame = cleaner.clean_data(frame)

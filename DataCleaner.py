@@ -33,6 +33,7 @@ class DataCleaner(object):
                     What's the distance between two stops anyway?
                     If a bus is driving towards its first station, that should not be counted as it being early.
         """
+        frame = frame[frame['RecordedAtTime'] != "3017-03-10T12:39:16+00:00"]
         frame = frame[frame['RecordedAtTime'].astype(str).astype('datetime64[ns]') > datetime(2017, 1, 1)]
         frame = frame[frame['Latitude'] < 61]
         frame = frame[frame['Longitude'] < 7.3]
@@ -76,6 +77,8 @@ class DataCleaner(object):
                    'OriginAimedDepartureTime',
                    'RecordedAtTime', 'TripId']
         frame = frame.drop_duplicates(columns)
+        # Remove white space from Line, to remove duplicate buss lines 
+        frame['Line']=frame['Line'].str.strip()
         return frame
 
     def one_hot_encoding(self, frame):

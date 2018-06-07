@@ -7,13 +7,10 @@ from read_json import loadData
 import pandas as pd
 import numpy as np
 
-# from __future__ import print_function
 import keras
-from keras.datasets import mnist
+
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras import backend as K
+from keras.layers import Dense
 
 def delay_to_category(delay):
     if delay <-1:
@@ -28,39 +25,21 @@ def delay_to_category(delay):
 def convert_date_and_time_columns(frame):
     """ Convert the datatypes related to time and date to one-hot encoding"""
 
-    frame['RecordedAtTime'] = frame['RecordedAtTime'].astype(str).astype('datetime64[ns]')
-    # frame['OriginAimedDepartureTime'] = frame['OriginAimedDepartureTime'].astype(str).astype('datetime64[ns]')
-    # frame['DestinationAimedArrivalTime'] = frame['DestinationAimedArrivalTime'].astype(str).astype('datetime64[ns]')
+
 
     frame['time_datetime'] = pd.to_datetime(frame['RecordedAtTime'])
-    # frame['Quarter'] = frame['time_datetime'].dt.quarter
-    # frame['Month'] = frame['time_datetime'].dt.month
-    # frame['Weekday'] = frame['time_datetime'].dt.dayofweek
+
+
     frame['Hour'] = frame['time_datetime'].dt.hour
     frame['Minute'] = frame['time_datetime'].dt.minute
 
-
-    # frame['Time'] = frame['Hour'].map(str) + ":" + frame['Minute'].astype(str)
-
+    # frame['Weekday'] = frame['time_datetime'].dt.dayofweek
     # frame['Weekday'] = frame['Weekday'].astype('category', ordered=True, categories=[0, 1, 2, 3, 4, 5, 6])
     # frame = pd.get_dummies(frame, columns=['Weekday'])
-    #
-    # frame['Month'] = frame['Month'].astype('category', ordered=True,
-    #                                        categories=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
-    # frame = pd.get_dummies(frame, columns=['Month'])
-    #
-    # frame['Quarter'] = frame['Quarter'].astype('category', ordered=True, categories=[1, 2, 3, 4])
-    # frame = pd.get_dummies(frame, columns=['Quarter'])
 
     frame['Seconds'] = frame['Hour'] * 60 * 60 + frame['Minute'] * 60
-
-    # frame['OriginAimedDepartureTimeSeconds'] = (pd.to_datetime(
-    #     frame['OriginAimedDepartureTime'])).dt.hour * 60 * 60 + (pd.to_datetime(
-    #     frame['OriginAimedDepartureTime'])).dt.minute * 60.0
-
     frame['Seconds'] = frame['Seconds'] / (24.0 * 60.0 * 60.0)
 
-    # frame['OriginAimedDepartureTimeSeconds'] = frame['OriginAimedDepartureTimeSeconds'] / (24.0 * 60.0 * 60.0)
 
     frame = frame.drop(
         ['time_datetime', 'RecordedAtTime', 'Hour',
@@ -88,6 +67,7 @@ def train_keras(frame):
     categories_y.sort()
 
 
+    # The Delay is seperated from the input and converted to one-hot encoding
     y_labels = (x_train.pop('Delay'))
     y_labels = pd.Categorical(y_labels,categories=categories_y,ordered=True)
     y_labels = pd.get_dummies(y_labels)
@@ -99,12 +79,14 @@ def train_keras(frame):
     x_train = np.array(x_train)
     y_labels = np.array(y_labels)
 
+    # The model arcitechure is defined
+
     model = Sequential()
     model.add(Dense(300,activation='relu',input_shape=(x_train.shape[1],)))
     model.add(Dense(200,activation='relu'))
     model.add(Dense(100,activation='relu'))
     model.add(Dense(num_classes, activation='softmax'))
-
+    model.summary()
 
     model.compile(loss=keras.losses.mean_squared_error, optimizer='sgd',
                   metrics=['accuracy'])
@@ -180,19 +162,19 @@ if __name__ == '__main__':
     frame = cleaner.clean_data(frame)
     print(frame.shape)
     print(frame.head())
-
+    frame['RecordedAtTime'] = frame['RecordedAtTime'].astype(str).astype('datetime64[ns]')
     # frame = read_data('data/lineBased_september_2017_train.csv')
 
-    frame_pruned = frame[['Delay','Line','RecordedAtTime']]
-    frame_pruned = frame_pruned.dropna()
+    frame_ml = frame[['Delay', 'Line', 'RecordedAtTime']]
+    frame_ml = frame_ml.dropna()
 
-    pprint(frame_pruned['Line'].unique())
+    pprint(frame_ml['Line'].unique())
 
     # frame_pruned['Delay_2'] = pd.cut(frame_pruned['Delay'],3, labels = ["Ahead", "On schedule", "Delayed"])
 
     # for col in df.columns:
-    frame_pruned['Delay'] = frame_pruned['Delay'].apply(lambda x: delay_to_category(x))
-    frame_pruned = convert_date_and_time_columns(frame_pruned)
+    frame_ml['Delay'] = frame_ml['Delay'].apply(lambda x: delay_to_category(x))
+    frame_ml = convert_date_and_time_columns(frame_ml)
 
-    print(frame_pruned.head(300))
-    train_keras(frame_pruned)
+    print(frame_ml.head(300))
+    train_keras(frame_ml)
