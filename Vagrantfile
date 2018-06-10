@@ -27,7 +27,7 @@ Vagrant.configure("2") do |config|
 	# update anaconda and install deep learning libraries
 	/usr/share/anaconda/bin/conda update conda
 	/usr/share/anaconda/bin/conda update anaconda
-	/usr/share/anaconda/bin/conda install -c conda-forge tensorflow
+	/usr/share/anaconda/bin/conda install tensorflow=1.8.0
 	/usr/share/anaconda/bin/conda update ipython
 	/usr/share/anaconda/bin/conda install -c conda-forge keras
 	#interactive maps
@@ -49,20 +49,11 @@ Vagrant.configure("2") do |config|
 	chown vagrant:vagrant /home/vagrant/.jupyter/ 
 	printf "c.NotebookApp.password = u'sha1:83aab2852741:71a56c4865ed39886d3742c4aac07fdd64489627'" > /home/vagrant/.jupyter/jupyter_notebook_config.py
 	chown vagrant:vagrant /home/vagrant/.jupyter/jupyter_notebook_config.py
-	# make startup script
-	echo jupyter notebook --ip 0.0.0.0 --notebook-dir=/home/vagrant/ml-intro-cx > /home/vagrant/run_jupyter.sh
-	chmod +x /home/vagrant/run_jupyter.sh
-	chown vagrant:vagrant /home/vagrant/run_jupyter.sh
-	
-        # log on to the box and run
-	# $ ./run_jupyter.sh	
-	# Go to you http://localhost:8888 and log on with the password "workshop"
 
         echo jupyter lab --ip 0.0.0.0  --notebook-dir=/home/vagrant/ml-intro-cx > /home/vagrant/run_lab.sh
         chmod +x /home/vagrant/run_lab.sh
         chown vagrant:vagrant /home/vagrant/run_lab.sh
         # Log into the box and run ./run_lab.sh then go to http://localhost:8888 and use "workshop" as password
-
 
 	# The following are the particular dependencies for the workshop
 	# clone the workshop repo
